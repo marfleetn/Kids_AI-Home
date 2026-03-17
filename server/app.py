@@ -2,7 +2,7 @@ import json
 import os
 import re
 import sqlite3
-import time
+
 from contextlib import asynccontextmanager
 from datetime import datetime, date
 from pathlib import Path
@@ -37,9 +37,16 @@ def get_filter_config() -> dict:
     return load_json(CONFIG_DIR / "content_filter.json")
 
 
+def get_db() -> sqlite3.Connection:
+    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    return conn
+
+
 def init_db():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     conn.execute("""
         CREATE TABLE IF NOT EXISTS conversations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,26 +71,17 @@ def init_db():
 
 
 def log_message(child_id: str, model: str, role: str, content: str, blocked: bool = False):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     conn.execute(
         "INSERT INTO conversations (child_id, model, role, content, blocked) VALUES (?, ?, ?, ?, ?)",
         (child_id, model, role, content, int(blocked)),
     )
-    if role == "user":
-        today = date.today().isoformat()
-        conn.execute(
-            """INSERT INTO daily_usage (child_id, date, message_count)
-               VALUES (?, ?, 1)
-               ON CONFLICT(child_id, date)
-               DO UPDATE SET message_count = message_count + 1""",
-            (child_id, today),
-        )
     conn.commit()
     conn.close()
 
 
 def get_daily_count(child_id: str) -> int:
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     row = conn.execute(
         "SELECT message_count FROM daily_usage WHERE child_id = ? AND date = ?",
         (child_id, date.today().isoformat()),
@@ -92,8 +90,38 @@ def get_daily_count(child_id: str) -> int:
     return row[0] if row else 0
 
 
+def check_and_increment_daily(child_id: str, limit: int) -> tuple[bool, int]:
+    """Atomically check daily limit and increment if under. Returns (allowed, current_count)."""
+    conn = get_db()
+    today = date.today().isoformat()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            "SELECT message_count FROM daily_usage WHERE child_id = ? AND date = ?",
+            (child_id, today),
+        ).fetchone()
+        count = row[0] if row else 0
+        if count >= limit:
+            conn.rollback()
+            return False, count
+        conn.execute(
+            """INSERT INTO daily_usage (child_id, date, message_count)
+               VALUES (?, ?, 1)
+               ON CONFLICT(child_id, date)
+               DO UPDATE SET message_count = message_count + 1""",
+            (child_id, today),
+        )
+        conn.commit()
+        return True, count + 1
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def get_conversation_history(child_id: str, limit: int = 20) -> list[dict]:
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     rows = conn.execute(
         """SELECT role, content FROM conversations
            WHERE child_id = ? AND blocked = 0
@@ -208,14 +236,15 @@ async def chat_api(request: Request):
     if len(message) > child.get("max_message_length", 500):
         raise HTTPException(status_code=400, detail="Message too long")
 
-    daily_count = get_daily_count(child["id"])
-    if daily_count >= child.get("max_messages_per_day", 100):
-        raise HTTPException(status_code=429, detail="Daily message limit reached. Try again tomorrow!")
-
     filter_config = get_filter_config()
     if check_content_filter(message, filter_config["blocked_input_patterns"]):
         log_message(child["id"], model, "user", message, blocked=True)
         return {"response": filter_config["blocked_response_message"], "blocked": True}
+
+    max_daily = child.get("max_messages_per_day", 100)
+    allowed, _count = check_and_increment_daily(child["id"], max_daily)
+    if not allowed:
+        raise HTTPException(status_code=429, detail="Daily message limit reached. Try again tomorrow!")
 
     log_message(child["id"], model, "user", message)
 
@@ -289,7 +318,7 @@ async def admin_dashboard(request: Request):
 
     config = get_children_config()
     children_stats = []
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     for child in config["children"]:
         total = conn.execute(
             "SELECT COUNT(*) FROM conversations WHERE child_id = ?", (child["id"],)
@@ -319,7 +348,7 @@ async def admin_logs(request: Request, child_id: str, page: int = 1):
 
     per_page = 50
     offset = (page - 1) * per_page
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     logs = conn.execute(
         """SELECT role, content, model, blocked, timestamp
            FROM conversations WHERE child_id = ?
