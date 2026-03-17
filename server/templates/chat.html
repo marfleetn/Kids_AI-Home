@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kids AI - Chat</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="chat-page">
+    <header class="chat-header">
+        <div class="header-left">
+            <span class="avatar">{{ child.avatar }}</span>
+            <span class="child-name">{{ child.name }}</span>
+        </div>
+        <div class="header-center">
+            <select id="model-select" class="model-select">
+                {% for model in child.allowed_models %}
+                <option value="{{ model }}">{{ model }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="header-right">
+            <span class="msg-counter" title="Messages today">{{ daily_count }} / {{ child.max_messages_per_day }}</span>
+            <a href="/logout" class="btn-logout">Logout</a>
+        </div>
+    </header>
+
+    <main class="chat-messages" id="messages">
+        <div class="welcome-message">
+            <div class="welcome-avatar">{{ child.avatar }}</div>
+            <h2>Hi {{ child.name }}!</h2>
+            <p>Ask me anything — I'm here to help you learn and have fun!</p>
+        </div>
+    </main>
+
+    <footer class="chat-input-area">
+        <form id="chat-form" class="chat-form">
+            <textarea id="message-input" placeholder="Type your message..."
+                      maxlength="{{ child.max_message_length }}" rows="1"
+                      autofocus></textarea>
+            <button type="submit" id="send-btn" class="btn-send">Send</button>
+        </form>
+        <div class="char-counter">
+            <span id="char-count">0</span> / {{ child.max_message_length }}
+        </div>
+    </footer>
+
+    <script src="/static/js/chat.js"></script>
+</body>
+</html>

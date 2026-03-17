@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kids AI - Parent Dashboard</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="login-page">
+    <div class="login-container admin-login">
+        <h1>Parent Dashboard</h1>
+        <p class="subtitle">Enter the admin password</p>
+
+        {% if request.query_params.get('error') == 'wrong_password' %}
+        <div class="error-banner">Wrong password!</div>
+        {% endif %}
+
+        <form method="post" action="/admin/login" class="login-form">
+            <div class="pin-input">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn-primary">Login</button>
+        </form>
+        <a href="/" class="back-link">Back to Kids Login</a>
+    </div>
+</body>
+</html>

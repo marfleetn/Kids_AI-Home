@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kids AI - Parent Dashboard</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="admin-page">
+    <header class="admin-header">
+        <h1>Parent Dashboard</h1>
+        <a href="/admin/logout" class="btn-logout">Logout</a>
+    </header>
+
+    <main class="admin-content">
+        <section class="stats-grid">
+            {% for child in children %}
+            <div class="stat-card">
+                <div class="stat-avatar">{{ child.avatar }}</div>
+                <h2>{{ child.name }}</h2>
+                <div class="stat-details">
+                    <div class="stat-item">
+                        <span class="stat-label">Today</span>
+                        <span class="stat-value">{{ child.today_messages }} msgs</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total</span>
+                        <span class="stat-value">{{ child.total_messages }} msgs</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Blocked</span>
+                        <span class="stat-value {% if child.blocked_messages > 0 %}warn{% endif %}">
+                            {{ child.blocked_messages }}
+                        </span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Daily limit</span>
+                        <span class="stat-value">{{ child.max_messages_per_day }}</span>
+                    </div>
+                </div>
+                <a href="/admin/logs/{{ child.id }}" class="btn-secondary">View Logs</a>
+            </div>
+            {% endfor %}
+        </section>
+
+        <section class="config-info">
+            <h2>Configuration</h2>
+            <p>Edit <code>config/children.json</code> to add/modify child profiles, PINs, allowed models, and personalities.</p>
+            <p>Edit <code>config/content_filter.json</code> to adjust content filtering rules.</p>
+            <p>Conversation logs are stored in <code>data/conversations.db</code> (SQLite).</p>
+        </section>
+    </main>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kids AI - Login</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <h1>Kids AI Chat</h1>
+        <p class="subtitle">Pick your profile and enter your PIN</p>
+
+        {% if request.query_params.get('error') == 'wrong_pin' %}
+        <div class="error-banner">Wrong PIN! Try again.</div>
+        {% endif %}
+
+        <form method="post" action="/login" class="login-form">
+            <div class="profile-grid">
+                {% for child in children %}
+                <label class="profile-card">
+                    <input type="radio" name="child_id" value="{{ child.id }}" required>
+                    <div class="profile-avatar">{{ child.avatar }}</div>
+                    <div class="profile-name">{{ child.name }}</div>
+                </label>
+                {% endfor %}
+            </div>
+
+            <div class="pin-input">
+                <label for="pin">Your PIN:</label>
+                <input type="password" id="pin" name="pin" maxlength="8"
+                       pattern="[0-9]*" inputmode="numeric" required
+                       placeholder="Enter PIN">
+            </div>
+
+            <button type="submit" class="btn-primary">Let's Chat!</button>
+        </form>
+    </div>
+</body>
+</html>

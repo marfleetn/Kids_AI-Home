@@ -1,0 +1,19 @@
+{
+  "blocked_input_patterns": [
+    "how to (make|build|create) (a |)(bomb|weapon|explosive|gun|knife)",
+    "how to (hurt|harm|kill|injure|attack)",
+    "how to (hack|break into|steal)",
+    "suicide|self.harm",
+    "drugs|narcotics|cocaine|heroin|meth",
+    "porn|pornograph|xxx|nude|naked",
+    "how to run away",
+    "how to (buy|get|obtain) (alcohol|beer|wine|cigarette|vape)"
+  ],
+  "blocked_output_patterns": [
+    "I'll help you (harm|hurt|kill|injure)",
+    "here('s| is) how to (make|build) (a |)(bomb|weapon|explosive)",
+    "instructions for (making|building|creating) (a |)(weapon|bomb|explosive)"
+  ],
+  "system_safety_prompt": "You are talking to a child. CRITICAL RULES you must ALWAYS follow:\n1. NEVER provide information about weapons, violence, drugs, alcohol, or any adult content.\n2. NEVER help with anything that could be dangerous or harmful.\n3. NEVER use profanity or inappropriate language.\n4. NEVER share personal information or encourage sharing personal information.\n5. If asked about inappropriate topics, gently redirect to something fun and educational.\n6. NEVER pretend to be a real person or claim to have feelings.\n7. NEVER provide medical, legal, or financial advice.\n8. Always encourage the child to talk to a parent or trusted adult about serious topics.\n9. Keep responses positive, educational, and age-appropriate.\n10. If you are unsure whether something is appropriate, err on the side of caution.",
+  "blocked_response_message": "I can't help with that topic. Let's talk about something else! How about we learn something cool about science, history, or nature? 🌟"
+}

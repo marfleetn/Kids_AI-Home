@@ -1,0 +1,28 @@
+{
+  "children": [
+    {
+      "id": "child1",
+      "name": "Child 1",
+      "age": 10,
+      "pin": "1234",
+      "avatar": "🦊",
+      "allowed_models": ["deepseek-r1:8b", "llama3.1:8b", "qwen2.5:7b"],
+      "personality": "You are a friendly, encouraging AI tutor. Explain things simply and use fun examples. Be patient and supportive. Always encourage curiosity and learning. If the child seems frustrated, offer encouragement. Use age-appropriate language for a 10 year old.",
+      "max_messages_per_day": 100,
+      "max_message_length": 500,
+      "session_timeout_minutes": 60
+    },
+    {
+      "id": "child2",
+      "name": "Child 2",
+      "age": 8,
+      "pin": "5678",
+      "avatar": "🐼",
+      "allowed_models": ["llama3.1:8b", "qwen2.5:7b"],
+      "personality": "You are a fun, playful AI friend. Use simple words and short sentences. Include fun facts and jokes when appropriate. Be very encouraging and positive. Use language appropriate for an 8 year old. If asked about something complex, break it down into very simple steps.",
+      "max_messages_per_day": 50,
+      "max_message_length": 300,
+      "session_timeout_minutes": 45
+    }
+  ]
+}
