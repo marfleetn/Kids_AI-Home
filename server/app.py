@@ -4,7 +4,7 @@ import re
 import sqlite3
 
 from contextlib import asynccontextmanager
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from pathlib import Path
 
 import httpx
@@ -140,6 +140,67 @@ def check_content_filter(text: str, patterns: list[str]) -> bool:
     return False
 
 
+# --- Auto model selection based on question type ---
+
+MODEL_ROUTING = {
+    "reasoning": {
+        "keywords": [
+            r"\bmath\b", r"\bcalculat", r"\bsolve\b", r"\bequation",
+            r"\balgebra", r"\bgeometry", r"\bfractions?\b", r"\bpercentage",
+            r"\bmultipl", r"\bdivid", r"\bsubtract", r"\badd\b",
+            r"\blogic\b", r"\bpuzzle", r"\briddle", r"\bbrain\s*teas",
+            r"\bproof\b", r"\bformula", r"\bnumber", r"\bcount\b",
+            r"\bhow many\b", r"\bhow much\b", r"\bwhat is \d",
+            r"\bcode\b", r"\bprogram", r"\bpython\b", r"\bjavascript\b",
+            r"\bdebug", r"\balgorithm",
+        ],
+        "model_preference": "deepseek-r1:8b",
+    },
+    "creative": {
+        "keywords": [
+            r"\bstory\b", r"\bstories\b", r"\bpoem\b", r"\bpoetry\b",
+            r"\bimagin", r"\bcreativ", r"\bwrite\b", r"\bwriting\b",
+            r"\binvent\b", r"\bmake up\b", r"\bpretend\b", r"\bfiction\b",
+            r"\bfairytale", r"\bonce upon\b", r"\bcharacter",
+            r"\bdraw\b", r"\bart\b", r"\bsong\b", r"\blyric",
+            r"\bjoke\b", r"\bfunny\b", r"\brhyme",
+        ],
+        "model_preference": "qwen2.5:7b",
+    },
+    "general": {
+        "keywords": [
+            r"\bwhat is\b", r"\bwho is\b", r"\bwhere is\b", r"\bwhen did\b",
+            r"\bwhy (do|does|did|is|are)\b", r"\bhow (do|does|did)\b",
+            r"\bexplain\b", r"\btell me about\b", r"\bhistory\b",
+            r"\bscience\b", r"\bgeography\b", r"\bnature\b", r"\banimal",
+            r"\bplanet", r"\bspace\b", r"\bdinosaur", r"\bocean\b",
+            r"\bweather\b", r"\bcountry\b", r"\bcountries\b",
+        ],
+        "model_preference": "llama3.1:8b",
+    },
+}
+
+
+def auto_select_model(message: str, allowed_models: list[str]) -> tuple[str, str]:
+    """Select the best model based on question type. Returns (model, category)."""
+    text_lower = message.lower()
+    best_category = "general"
+    best_score = 0
+
+    for category, config in MODEL_ROUTING.items():
+        score = sum(1 for kw in config["keywords"] if re.search(kw, text_lower))
+        if score > best_score:
+            best_score = score
+            best_category = category
+
+    preferred = MODEL_ROUTING[best_category]["model_preference"]
+    if preferred in allowed_models:
+        return preferred, best_category
+
+    # Fallback to first allowed model if preferred isn't available
+    return allowed_models[0], best_category
+
+
 def get_session_child(request: Request) -> dict | None:
     token = request.cookies.get("session")
     if not token:
@@ -228,9 +289,13 @@ async def chat_api(request: Request):
 
     body = await request.json()
     message = body.get("message", "").strip()
-    model = body.get("model", child["allowed_models"][0])
+    model = body.get("model", "auto")
 
-    if model not in child["allowed_models"]:
+    # Auto-select model based on question type
+    auto_category = None
+    if model == "auto":
+        model, auto_category = auto_select_model(message, child["allowed_models"])
+    elif model not in child["allowed_models"]:
         raise HTTPException(status_code=403, detail="Model not allowed")
 
     if len(message) > child.get("max_message_length", 500):
@@ -255,6 +320,9 @@ async def chat_api(request: Request):
     messages.extend(history)
 
     async def generate():
+        # Send auto-selection info to frontend
+        if auto_category:
+            yield f"data: {json.dumps({'auto_model': model, 'category': auto_category})}\n\n"
         full_response = ""
         async with httpx.AsyncClient(timeout=120.0) as client:
             async with client.stream(
@@ -282,6 +350,37 @@ async def chat_api(request: Request):
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@app.get("/api/history")
+async def chat_history(request: Request, days: int = 7):
+    """Return conversation history for the logged-in child (last N days)."""
+    child = get_session_child(request)
+    if not child:
+        raise HTTPException(status_code=401, detail="Not logged in")
+
+    days = min(days, 30)  # Cap at 30 days max
+    since = (date.today() - timedelta(days=days)).isoformat()
+    conn = get_db()
+    rows = conn.execute(
+        """SELECT role, content, model, blocked, timestamp
+           FROM conversations
+           WHERE child_id = ? AND timestamp >= ? AND blocked = 0
+           ORDER BY id ASC""",
+        (child["id"], since),
+    ).fetchall()
+    conn.close()
+
+    messages = []
+    for row in rows:
+        messages.append({
+            "role": row[0],
+            "content": row[1],
+            "model": row[2],
+            "timestamp": row[4],
+        })
+
+    return {"messages": messages}
 
 
 # --- Admin routes ---

@@ -311,6 +311,49 @@ body {
     margin-top: 4px;
 }
 
+/* --- Date Separators & Auto Model Badge --- */
+.date-separator {
+    text-align: center;
+    margin: 16px 0 8px;
+    position: relative;
+}
+
+.date-separator::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    background: var(--border);
+}
+
+.date-separator span {
+    position: relative;
+    background: var(--bg);
+    padding: 0 12px;
+    font-size: 0.8em;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+.auto-model-badge {
+    font-size: 0.7em;
+    color: var(--text-light);
+    background: var(--bg);
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    border: 1px solid var(--border);
+}
+
+.message-content {
+    display: block;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
 /* --- Admin Page --- */
 .admin-header {
     display: flex;

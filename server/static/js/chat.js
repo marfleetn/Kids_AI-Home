@@ -72,13 +72,16 @@ form.addEventListener("submit", async (e) => {
                     if (data === "[DONE]") continue;
                     try {
                         const parsed = JSON.parse(data);
-                        if (parsed.replace) {
+                        if (parsed.auto_model) {
+                            // Show which model was auto-selected
+                            showAutoModelBadge(assistantEl, parsed.auto_model, parsed.category);
+                        } else if (parsed.replace) {
                             fullText = parsed.replace;
-                            assistantEl.textContent = fullText;
+                            setMessageText(assistantEl, fullText);
                             assistantEl.className = "message message-blocked";
                         } else if (parsed.token) {
                             fullText += parsed.token;
-                            assistantEl.textContent = fullText;
+                            setMessageText(assistantEl, fullText);
                         }
                     } catch {}
                 }
@@ -103,7 +106,7 @@ form.addEventListener("submit", async (e) => {
     updateCounter();
 });
 
-function addMessage(role, text) {
+function addMessage(role, text, meta) {
     const el = document.createElement("div");
     const classMap = {
         user: "message message-user",
@@ -111,10 +114,36 @@ function addMessage(role, text) {
         blocked: "message message-blocked",
     };
     el.className = classMap[role] || "message message-assistant";
-    el.textContent = text;
+
+    const contentSpan = document.createElement("span");
+    contentSpan.className = "message-content";
+    contentSpan.textContent = text;
+    el.appendChild(contentSpan);
+
     messagesEl.appendChild(el);
     scrollToBottom();
     return el;
+}
+
+function setMessageText(el, text) {
+    const contentSpan = el.querySelector(".message-content");
+    if (contentSpan) {
+        contentSpan.textContent = text;
+    } else {
+        el.textContent = text;
+    }
+}
+
+function showAutoModelBadge(el, model, category) {
+    const categoryLabels = {
+        reasoning: "Math & Logic",
+        creative: "Creative",
+        general: "General Knowledge",
+    };
+    const badge = document.createElement("div");
+    badge.className = "auto-model-badge";
+    badge.textContent = `${categoryLabels[category] || category} → ${model}`;
+    el.insertBefore(badge, el.firstChild);
 }
 
 function scrollToBottom() {
@@ -132,6 +161,52 @@ function updateCounter() {
     }
 }
 
+// --- Load conversation history (last 7 days) ---
+async function loadHistory() {
+    try {
+        const resp = await fetch("/api/history?days=7");
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (!data.messages || data.messages.length === 0) return;
+
+        // Remove welcome message when there's history
+        const welcome = messagesEl.querySelector(".welcome-message");
+        if (welcome) welcome.remove();
+
+        // Group messages by date
+        let lastDate = "";
+        for (const msg of data.messages) {
+            const msgDate = msg.timestamp ? msg.timestamp.split(" ")[0] : "";
+            if (msgDate && msgDate !== lastDate) {
+                addDateSeparator(msgDate);
+                lastDate = msgDate;
+            }
+            addMessage(msg.role, msg.content);
+        }
+
+        scrollToBottom();
+    } catch {}
+}
+
+function addDateSeparator(dateStr) {
+    const el = document.createElement("div");
+    el.className = "date-separator";
+
+    const today = new Date().toISOString().split("T")[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+
+    let label = dateStr;
+    if (dateStr === today) label = "Today";
+    else if (dateStr === yesterday) label = "Yesterday";
+    else {
+        const d = new Date(dateStr + "T00:00:00");
+        label = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    }
+
+    el.innerHTML = `<span>${label}</span>`;
+    messagesEl.appendChild(el);
+}
+
 // Load available models on page load
 (async () => {
     try {
@@ -140,6 +215,7 @@ function updateCounter() {
             const data = await resp.json();
             const options = modelSelect.querySelectorAll("option");
             options.forEach((opt) => {
+                if (opt.value === "auto") return; // skip auto option
                 if (!data.models.includes(opt.value)) {
                     opt.disabled = true;
                     opt.textContent += " (loading...)";
@@ -147,4 +223,7 @@ function updateCounter() {
             });
         }
     } catch {}
+
+    // Load conversation history after models
+    await loadHistory();
 })();
