@@ -154,7 +154,6 @@ MODEL_ROUTING = {
             r"\bcode\b", r"\bprogram", r"\bpython\b", r"\bjavascript\b",
             r"\bdebug", r"\balgorithm",
         ],
-        "model_preference": "deepseek-r1:8b",
     },
     "creative": {
         "keywords": [
@@ -165,7 +164,6 @@ MODEL_ROUTING = {
             r"\bdraw\b", r"\bart\b", r"\bsong\b", r"\blyric",
             r"\bjoke\b", r"\bfunny\b", r"\brhyme",
         ],
-        "model_preference": "qwen2.5:7b",
     },
     "general": {
         "keywords": [
@@ -176,13 +174,12 @@ MODEL_ROUTING = {
             r"\bplanet", r"\bspace\b", r"\bdinosaur", r"\bocean\b",
             r"\bweather\b", r"\bcountry\b", r"\bcountries\b",
         ],
-        "model_preference": "llama3.1:8b",
     },
 }
 
 
 def auto_select_model(message: str, allowed_models: list[str]) -> tuple[str, str]:
-    """Select the best model based on question type. Returns (model, category)."""
+    """Classify question type and select model. Returns (model, category)."""
     text_lower = message.lower()
     best_category = "general"
     best_score = 0
@@ -193,11 +190,6 @@ def auto_select_model(message: str, allowed_models: list[str]) -> tuple[str, str
             best_score = score
             best_category = category
 
-    preferred = MODEL_ROUTING[best_category]["model_preference"]
-    if preferred in allowed_models:
-        return preferred, best_category
-
-    # Fallback to first allowed model if preferred isn't available
     return allowed_models[0], best_category
 
 

@@ -1,27 +1,6 @@
 version: "3.8"
 
 services:
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
-    restart: unless-stopped
-    volumes:
-      - ollama_data:/root/.ollama
-    ports:
-      - "11434:11434"
-    environment:
-      - OLLAMA_NUM_PARALLEL=3
-      - OLLAMA_MAX_LOADED_MODELS=3
-    deploy:
-      resources:
-        limits:
-          memory: 48g
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
   server:
     build:
       context: ./server
@@ -34,31 +13,6 @@ services:
       - ./config:/app/config
       - ./data:/app/data
     environment:
-      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_URL=${OLLAMA_URL:-http://192.168.1.x:11434}
       - SECRET_KEY=${SECRET_KEY:-change-me-to-a-random-string}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
-    depends_on:
-      ollama:
-        condition: service_healthy
-
-  model-loader:
-    image: ollama/ollama:latest
-    container_name: model-loader
-    depends_on:
-      ollama:
-        condition: service_healthy
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        echo "Pulling DeepSeek..."
-        ollama pull deepseek-r1:8b
-        echo "Pulling Llama..."
-        ollama pull llama3.1:8b
-        echo "Pulling Qwen..."
-        ollama pull qwen2.5:7b
-        echo "All models pulled successfully!"
-    environment:
-      - OLLAMA_HOST=http://ollama:11434
-
-volumes:
-  ollama_data:
