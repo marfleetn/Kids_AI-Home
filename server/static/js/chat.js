@@ -106,6 +106,41 @@ form.addEventListener("submit", async (e) => {
     updateCounter();
 });
 
+function renderMarkdown(text) {
+    let html = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+    // Code blocks (``` ... ```)
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+    // Inline code
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // Bold
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Italic
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    // Headers
+    html = html.replace(/^### (.+)$/gm, '<strong style="font-size:1.05em">$1</strong>');
+    html = html.replace(/^## (.+)$/gm, '<strong style="font-size:1.1em">$1</strong>');
+    html = html.replace(/^# (.+)$/gm, '<strong style="font-size:1.2em">$1</strong>');
+    // Unordered lists
+    html = html.replace(/^\* (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+    // Ordered lists
+    html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+    // Wrap consecutive <li> in <ul>
+    html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+    // Line breaks (but not inside pre/code blocks)
+    html = html.replace(/\n/g, '<br>');
+    // Clean up <br> inside <ul>
+    html = html.replace(/<br><ul>/g, '<ul>');
+    html = html.replace(/<\/ul><br>/g, '</ul>');
+    html = html.replace(/<\/li><br>/g, '</li>');
+
+    return html;
+}
+
 function addMessage(role, text, meta) {
     const el = document.createElement("div");
     const classMap = {
@@ -117,7 +152,11 @@ function addMessage(role, text, meta) {
 
     const contentSpan = document.createElement("span");
     contentSpan.className = "message-content";
-    contentSpan.textContent = text;
+    if (role === "assistant") {
+        contentSpan.innerHTML = renderMarkdown(text);
+    } else {
+        contentSpan.textContent = text;
+    }
     el.appendChild(contentSpan);
 
     messagesEl.appendChild(el);
@@ -128,7 +167,11 @@ function addMessage(role, text, meta) {
 function setMessageText(el, text) {
     const contentSpan = el.querySelector(".message-content");
     if (contentSpan) {
-        contentSpan.textContent = text;
+        if (el.classList.contains("message-assistant")) {
+            contentSpan.innerHTML = renderMarkdown(text);
+        } else {
+            contentSpan.textContent = text;
+        }
     } else {
         el.textContent = text;
     }

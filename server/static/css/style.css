@@ -229,7 +229,37 @@ body {
     border-radius: 16px;
     line-height: 1.5;
     word-wrap: break-word;
-    white-space: pre-wrap;
+}
+
+.message-user { white-space: pre-wrap; }
+
+.message-assistant ul {
+    margin: 4px 0;
+    padding-left: 20px;
+}
+
+.message-assistant li { margin: 2px 0; }
+
+.message-assistant code {
+    background: rgba(0, 0, 0, 0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.message-assistant pre {
+    background: #2d3436;
+    color: #dfe6e9;
+    padding: 10px 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 6px 0;
+}
+
+.message-assistant pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
 }
 
 .message-user {
