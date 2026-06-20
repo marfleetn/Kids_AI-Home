@@ -157,6 +157,16 @@ Use this IP from other devices: `http://<host-ip>:8090`
 
 Repeat for each child's profile.
 
+### Chromebook can't connect but laptop/phone can (Wi-Fi band isolation)
+
+**Cause:** The router has AP/client isolation enabled on the 2.4GHz band, or doesn't bridge traffic between 2.4GHz and 5GHz bands. Devices on different bands can't see each other.
+
+**Diagnosis:** If the Chromebook works when forced onto 5GHz (same band as the host PC) but not on 2.4GHz, this is the issue.
+
+**Fix (preferred):** In your router admin page, find the 2.4GHz wireless settings and disable "AP isolation" / "Client isolation". This allows all devices to communicate regardless of which band they're on.
+
+**Fix (alternative):** On each Chromebook, go to Settings > Network > Wi-Fi > your network and set the preferred band to 5GHz. Note: not all Chromebooks support 5GHz.
+
 ### "Connection refused" (instant error, not timeout)
 
 **Cause:** The service is not running, or the port forwarding is misconfigured.
