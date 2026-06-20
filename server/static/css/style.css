@@ -384,6 +384,101 @@ body {
     word-wrap: break-word;
 }
 
+/* --- Spelling Game --- */
+.spelling-game {
+    align-self: flex-start;
+    max-width: 85%;
+    background: linear-gradient(135deg, #fff9e6 0%, #fff3cc 100%);
+    border: 2px solid #f0c040;
+    border-radius: 16px;
+    padding: 20px;
+}
+
+.spelling-header {
+    font-size: 1.3em;
+    font-weight: 700;
+    color: #e67e22;
+    margin-bottom: 8px;
+}
+
+.spelling-intro {
+    color: var(--text-light);
+    margin-bottom: 16px;
+    font-size: 0.95em;
+}
+
+.spelling-words {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.spelling-word {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.spelling-original {
+    font-size: 0.9em;
+    color: var(--text);
+}
+
+.spelling-hint {
+    font-size: 0.8em;
+    color: var(--text-light);
+    font-family: monospace;
+    letter-spacing: 2px;
+}
+
+.spelling-input {
+    padding: 8px 12px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-family: inherit;
+    width: 100%;
+    max-width: 250px;
+    transition: border-color 0.3s;
+}
+
+.spelling-input:focus { outline: none; border-color: var(--primary); }
+.spelling-input.input-correct { border-color: var(--success); background: #e6fff2; }
+.spelling-input.input-wrong { border-color: var(--danger); animation: shake 0.4s; }
+
+.spelling-result {
+    font-size: 0.85em;
+    font-weight: 700;
+    min-height: 1.2em;
+}
+
+.spelling-correct { color: var(--success); }
+.spelling-wrong { color: var(--danger); }
+
+.btn-spelling-check {
+    background: #e67e22;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: var(--radius);
+    font-weight: 600;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-spelling-check:hover { background: #d35400; }
+.btn-spelling-check:disabled { background: var(--success); cursor: default; }
+
+.spelling-complete { opacity: 0.7; }
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+}
+
 /* --- Admin Page --- */
 .admin-header {
     display: flex;

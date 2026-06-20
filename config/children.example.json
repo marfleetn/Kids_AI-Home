@@ -19,6 +19,7 @@
       "pin": "5678",
       "avatar": "🐼",
       "allowed_models": ["gemma4:27b"],
+      "spelling_mode": true,
       "personality": "You are a fun, playful AI friend. Use simple words and short sentences. Include fun facts and jokes when appropriate. Be very encouraging and positive. Use language appropriate for an 8 year old. If asked about something complex, break it down into very simple steps.",
       "max_messages_per_day": 50,
       "max_message_length": 300,

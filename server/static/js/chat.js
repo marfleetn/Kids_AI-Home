@@ -54,6 +54,27 @@ form.addEventListener("submit", async (e) => {
         }
 
         const contentType = resp.headers.get("content-type") || "";
+
+        // Check for spelling challenge
+        if (contentType.includes("application/json")) {
+            const data = await resp.json();
+            typingEl.remove();
+            if (data.spelling_challenge) {
+                showSpellingGame(data.misspelt, data.original_message);
+                sendBtn.disabled = false;
+                return;
+            }
+            if (data.blocked) {
+                addMessage("blocked", data.response);
+            } else {
+                addMessage("assistant", data.response);
+            }
+            sendBtn.disabled = false;
+            input.focus();
+            updateCounter();
+            return;
+        }
+
         if (contentType.includes("text/event-stream")) {
             typingEl.remove();
             const assistantEl = addMessage("assistant", "");
@@ -86,14 +107,6 @@ form.addEventListener("submit", async (e) => {
                     } catch {}
                 }
                 scrollToBottom();
-            }
-        } else {
-            const data = await resp.json();
-            typingEl.remove();
-            if (data.blocked) {
-                addMessage("blocked", data.response);
-            } else {
-                addMessage("assistant", data.response);
             }
         }
     } catch (err) {
@@ -248,6 +261,130 @@ function addDateSeparator(dateStr) {
 
     el.innerHTML = `<span>${label}</span>`;
     messagesEl.appendChild(el);
+}
+
+// --- Spelling Game ---
+function showSpellingGame(misspeltWords, originalMessage) {
+    const gameEl = document.createElement("div");
+    gameEl.className = "spelling-game";
+
+    let html = '<div class="spelling-header">Spelling Challenge!</div>';
+    html += '<p class="spelling-intro">Let\'s practise spelling before we chat! Type the correct spelling for each word:</p>';
+    html += '<div class="spelling-words">';
+    misspeltWords.forEach((item, i) => {
+        html += `<div class="spelling-word" data-index="${i}" data-answer="${item.correction}">`;
+        html += `<span class="spelling-original">You wrote: <strong>${item.word}</strong></span>`;
+        html += `<span class="spelling-hint">Hint: ${item.hint}</span>`;
+        html += `<input type="text" class="spelling-input" data-index="${i}" placeholder="Type correct spelling..." autocomplete="off" spellcheck="false">`;
+        html += `<span class="spelling-result"></span>`;
+        html += `</div>`;
+    });
+    html += '</div>';
+    html += '<button class="btn-spelling-check" onclick="checkSpelling(this)">Check My Spelling</button>';
+
+    gameEl.innerHTML = html;
+    gameEl.dataset.originalMessage = originalMessage;
+    messagesEl.appendChild(gameEl);
+    scrollToBottom();
+
+    const firstInput = gameEl.querySelector(".spelling-input");
+    if (firstInput) firstInput.focus();
+}
+
+async function checkSpelling(btn) {
+    const gameEl = btn.closest(".spelling-game");
+    const words = gameEl.querySelectorAll(".spelling-word");
+    let allCorrect = true;
+
+    words.forEach((wordEl) => {
+        const answer = wordEl.dataset.answer.toLowerCase();
+        const inputEl = wordEl.querySelector(".spelling-input");
+        const resultEl = wordEl.querySelector(".spelling-result");
+        const typed = inputEl.value.trim().toLowerCase();
+
+        if (typed === answer) {
+            resultEl.textContent = "Correct!";
+            resultEl.className = "spelling-result spelling-correct";
+            inputEl.disabled = true;
+            inputEl.classList.add("input-correct");
+        } else {
+            resultEl.textContent = "Try again!";
+            resultEl.className = "spelling-result spelling-wrong";
+            inputEl.classList.add("input-wrong");
+            setTimeout(() => inputEl.classList.remove("input-wrong"), 600);
+            allCorrect = false;
+        }
+    });
+
+    if (allCorrect) {
+        btn.textContent = "All correct! Sending your question...";
+        btn.disabled = true;
+        gameEl.classList.add("spelling-complete");
+
+        const originalMessage = gameEl.dataset.originalMessage;
+
+        // Re-send the original message with spelling_passed flag
+        sendBtn.disabled = true;
+        const typingEl = document.createElement("div");
+        typingEl.className = "typing-indicator";
+        typingEl.textContent = "Thinking...";
+        messagesEl.appendChild(typingEl);
+        scrollToBottom();
+
+        try {
+            const resp = await fetch("/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    message: originalMessage,
+                    model: modelSelect.value,
+                    spelling_passed: true,
+                }),
+            });
+
+            const contentType = resp.headers.get("content-type") || "";
+            if (contentType.includes("text/event-stream")) {
+                typingEl.remove();
+                const assistantEl = addMessage("assistant", "");
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let fullText = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split("\n");
+                    for (const line of lines) {
+                        if (!line.startsWith("data: ")) continue;
+                        const data = line.slice(6);
+                        if (data === "[DONE]") continue;
+                        try {
+                            const parsed = JSON.parse(data);
+                            if (parsed.auto_model) {
+                                showAutoModelBadge(assistantEl, parsed.auto_model, parsed.category);
+                            } else if (parsed.replace) {
+                                fullText = parsed.replace;
+                                setMessageText(assistantEl, fullText);
+                                assistantEl.className = "message message-blocked";
+                            } else if (parsed.token) {
+                                fullText += parsed.token;
+                                setMessageText(assistantEl, fullText);
+                            }
+                        } catch {}
+                    }
+                    scrollToBottom();
+                }
+            }
+        } catch {
+            typingEl.remove();
+            addMessage("blocked", "Connection error. Please try again.");
+        }
+
+        sendBtn.disabled = false;
+        input.focus();
+        updateCounter();
+    }
 }
 
 // Load available models on page load

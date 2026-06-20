@@ -13,6 +13,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeSerializer
+from spellchecker import SpellChecker
+
+spell = SpellChecker(language="en")
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://ollama:11434")
 SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-to-a-random-string")
@@ -178,6 +181,36 @@ MODEL_ROUTING = {
 }
 
 
+SPELLING_SKIP_WORDS = {
+    "ai", "ok", "lol", "haha", "gonna", "wanna", "gotta", "dont",
+    "cant", "wont", "im", "ive", "hes", "shes", "theyre", "youre",
+    "whats", "thats", "lets", "isnt", "arent", "didnt", "doesnt",
+    "hasnt", "havent", "wouldnt", "couldnt", "shouldnt",
+}
+
+
+def check_spelling(message: str) -> list[dict]:
+    """Find misspelt words. Returns list of {word, suggestions}."""
+    words = re.findall(r"[a-zA-Z']+", message)
+    misspelt = []
+    seen = set()
+    for word in words:
+        lower = word.lower().strip("'")
+        if len(lower) <= 2 or lower in seen or lower in SPELLING_SKIP_WORDS:
+            continue
+        if lower in spell.unknown([lower]):
+            correction = spell.correction(lower)
+            candidates = spell.candidates(lower)
+            if correction and correction != lower:
+                seen.add(lower)
+                misspelt.append({
+                    "word": word,
+                    "correction": correction,
+                    "hint": f"{correction[0]}{'_' * (len(correction) - 2)}{correction[-1]}" if len(correction) > 2 else correction,
+                })
+    return misspelt
+
+
 def auto_select_model(message: str, allowed_models: list[str]) -> tuple[str, str]:
     """Classify question type and select model. Returns (model, category)."""
     text_lower = message.lower()
@@ -297,6 +330,16 @@ async def chat_api(request: Request):
     if check_content_filter(message, filter_config["blocked_input_patterns"]):
         log_message(child["id"], model, "user", message, blocked=True)
         return {"response": filter_config["blocked_response_message"], "blocked": True}
+
+    # Spelling challenge for children with spelling_mode enabled
+    if child.get("spelling_mode") and not body.get("spelling_passed"):
+        misspelt = check_spelling(message)
+        if misspelt:
+            return {
+                "spelling_challenge": True,
+                "misspelt": misspelt,
+                "original_message": message,
+            }
 
     max_daily = child.get("max_messages_per_day", 100)
     allowed, _count = check_and_increment_daily(child["id"], max_daily)
