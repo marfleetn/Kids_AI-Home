@@ -196,7 +196,7 @@ def check_spelling(message: str) -> list[dict]:
     seen = set()
     for word in words:
         lower = word.lower().strip("'")
-        if len(lower) <= 2 or lower in seen or lower in SPELLING_SKIP_WORDS:
+        if len(lower) <= 3 or lower in seen or lower in SPELLING_SKIP_WORDS:
             continue
         if lower in spell.unknown([lower]):
             correction = spell.correction(lower)
