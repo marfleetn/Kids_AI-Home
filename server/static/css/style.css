@@ -384,6 +384,64 @@ body {
     word-wrap: break-word;
 }
 
+/* --- Word of the Day --- */
+.wotd-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    border-bottom: 2px solid #81c784;
+    position: relative;
+}
+
+.wotd-star { font-size: 2em; line-height: 1; }
+
+.wotd-content { flex: 1; }
+
+.wotd-label {
+    font-size: 0.75em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #388e3c;
+    margin-bottom: 2px;
+}
+
+.wotd-word {
+    font-size: 1.4em;
+    font-weight: 800;
+    color: #2e7d32;
+    margin-bottom: 4px;
+}
+
+.wotd-definition {
+    font-size: 0.95em;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.wotd-example {
+    font-size: 0.85em;
+    color: var(--text-light);
+    font-style: italic;
+}
+
+.wotd-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 1.4em;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.wotd-close:hover { color: var(--text); }
+
 /* --- Spelling Game --- */
 .spelling-game {
     align-self: flex-start;

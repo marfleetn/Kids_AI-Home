@@ -387,6 +387,20 @@ async function checkSpelling(btn) {
     }
 }
 
+// --- Word of the Day ---
+async function loadWordOfTheDay() {
+    try {
+        const resp = await fetch("/api/word-of-the-day");
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (!data.word) return;
+        document.getElementById("wotd-word").textContent = data.word;
+        document.getElementById("wotd-definition").textContent = data.definition;
+        document.getElementById("wotd-example").textContent = `"${data.example}"`;
+        document.getElementById("wotd-banner").style.display = "flex";
+    } catch {}
+}
+
 // Load available models on page load
 (async () => {
     try {
@@ -404,6 +418,7 @@ async function checkSpelling(btn) {
         }
     } catch {}
 
-    // Load conversation history after models
+    // Load word of the day and conversation history
+    await loadWordOfTheDay();
     await loadHistory();
 })();

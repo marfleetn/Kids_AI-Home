@@ -26,6 +26,17 @@
         </div>
     </header>
 
+    <div id="wotd-banner" class="wotd-banner" style="display:none">
+        <div class="wotd-star">⭐</div>
+        <div class="wotd-content">
+            <div class="wotd-label">Word of the Day</div>
+            <div class="wotd-word" id="wotd-word"></div>
+            <div class="wotd-definition" id="wotd-definition"></div>
+            <div class="wotd-example" id="wotd-example"></div>
+        </div>
+        <button class="wotd-close" onclick="this.parentElement.style.display='none'" title="Dismiss">&times;</button>
+    </div>
+
     <main class="chat-messages" id="messages">
         <div class="welcome-message">
             <div class="welcome-avatar">{{ child.avatar }}</div>

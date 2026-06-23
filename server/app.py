@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import re
@@ -211,6 +212,22 @@ def check_spelling(message: str) -> list[dict]:
     return misspelt
 
 
+def get_word_of_the_day(child: dict) -> dict | None:
+    """Select a consistent word of the day based on child age group and today's date."""
+    wotd_path = CONFIG_DIR / "word_of_the_day.json"
+    if not wotd_path.exists():
+        return None
+    words_config = load_json(wotd_path)
+    age = child.get("age", 10)
+    word_list_key = "age_8" if age <= 8 else "age_10_12"
+    word_list = words_config.get(word_list_key, [])
+    if not word_list:
+        return None
+    seed = hashlib.md5(f"{date.today().isoformat()}-{word_list_key}".encode()).hexdigest()
+    index = int(seed, 16) % len(word_list)
+    return word_list[index]
+
+
 def auto_select_model(message: str, allowed_models: list[str]) -> tuple[str, str]:
     """Classify question type and select model. Returns (model, category)."""
     text_lower = message.lower()
@@ -385,6 +402,17 @@ async def chat_api(request: Request):
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@app.get("/api/word-of-the-day")
+async def word_of_the_day(request: Request):
+    child = get_session_child(request)
+    if not child:
+        raise HTTPException(status_code=401, detail="Not logged in")
+    word = get_word_of_the_day(child)
+    if not word:
+        return {"word": None}
+    return word
 
 
 @app.get("/api/history")
